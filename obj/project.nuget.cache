@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "W3olamjig6g=",
+  "success": true,
+  "projectFilePath": "/home/robert-mcnarland/repositories/CodeAggregatorLinux/CodeAggregatorLinux.csproj",
+  "expectedPackageFiles": [
+    "/home/robert-mcnarland/.nuget/packages/atksharp/3.24.24.95/atksharp.3.24.24.95.nupkg.sha512",
+    "/home/robert-mcnarland/.nuget/packages/cairosharp/3.24.24.95/cairosharp.3.24.24.95.nupkg.sha512",
+    "/home/robert-mcnarland/.nuget/packages/gdksharp/3.24.24.95/gdksharp.3.24.24.95.nupkg.sha512",
+    "/home/robert-mcnarland/.nuget/packages/giosharp/3.24.24.95/giosharp.3.24.24.95.nupkg.sha512",
+    "/home/robert-mcnarland/.nuget/packages/glibsharp/3.24.24.95/glibsharp.3.24.24.95.nupkg.sha512",
+    "/home/robert-mcnarland/.nuget/packages/gtksharp/3.24.24.95/gtksharp.3.24.24.95.nupkg.sha512",
+    "/home/robert-mcnarland/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512",
+    "/home/robert-mcnarland/.nuget/packages/pangosharp/3.24.24.95/pangosharp.3.24.24.95.nupkg.sha512"
+  ],
+  "logs": []
+}
