@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using Gtk;
 using Newtonsoft.Json;
+using System.IO;
 
 namespace CodeAggregatorGtk
 {
@@ -19,7 +18,7 @@ namespace CodeAggregatorGtk
                 return;
             }
 
-            settings = LoadSettings();
+            LoadSettings();
 
             if (args.Length > 0)
             {
@@ -68,13 +67,13 @@ namespace CodeAggregatorGtk
                 {
                     string item = args[i].Substring(3);
                     settings.Include.Add(item);
-                    SaveSettings(settings);
+                    SaveSettings();
                 }
                 else if (args[i].StartsWith("-r:"))
                 {
                     string item = args[i].Substring(3);
                     settings.Exclude.Add(item);
-                    SaveSettings(settings);
+                    SaveSettings();
                 }
             }
 
@@ -115,17 +114,16 @@ namespace CodeAggregatorGtk
             }
         }
 
-        static Settings LoadSettings()
+        static void LoadSettings()
         {
             if (File.Exists(settingsFile))
             {
                 var json = File.ReadAllText(settingsFile);
-                return JsonConvert.DeserializeObject<Settings>(json) ?? new Settings();
+                settings = JsonConvert.DeserializeObject<Settings>(json) ?? new Settings();
             }
-            return new Settings();
         }
 
-        static void SaveSettings(Settings settings)
+        static void SaveSettings()
         {
             var json = JsonConvert.SerializeObject(settings, Formatting.Indented);
             File.WriteAllText(settingsFile, json);
