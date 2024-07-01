@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace CodeAggregatorGtk
 {
@@ -8,18 +9,12 @@ namespace CodeAggregatorGtk
     {
         public static void AggregateFiles(string sourceFolder, string outputFile, List<string> include, List<string> exclude)
         {
-            using (var output = new StreamWriter(outputFile))
-            {
-                output.WriteLine($"Source Folder: {sourceFolder}");
-                AggregateFolder(sourceFolder, sourceFolder, output, include, exclude);
-            }
-        }
+            var sb = new StringBuilder();
+            sb.AppendLine($"Source Folder: {sourceFolder}");
 
-        private static void AggregateFolder(string rootFolder, string currentFolder, StreamWriter output, List<string> include, List<string> exclude)
-        {
-            foreach (var file in Directory.GetFiles(currentFolder, "*.*", SearchOption.TopDirectoryOnly))
+            foreach (var file in Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories))
             {
-                string relativePath = Path.GetRelativePath(rootFolder, file);
+                string relativePath = Path.GetRelativePath(sourceFolder, file);
                 if (exclude.Contains(file) || exclude.Contains(relativePath))
                 {
                     continue;
@@ -30,18 +25,15 @@ namespace CodeAggregatorGtk
                     bool isTextFile = IsTextFile(file);
                     if (isTextFile)
                     {
-                        output.WriteLine($"\n--- Start of File: {relativePath} ---\n");
+                        sb.AppendLine($"\n--- Start of File: {relativePath} ---\n");
                         var content = File.ReadAllText(file);
-                        output.WriteLine(content);
-                        output.WriteLine($"\n--- End of File: {relativePath} ---\n");
+                        sb.AppendLine(content);
+                        sb.AppendLine($"\n--- End of File: {relativePath} ---\n");
                     }
                 }
             }
 
-            foreach (var dir in Directory.GetDirectories(currentFolder, "*", SearchOption.TopDirectoryOnly))
-            {
-                AggregateFolder(rootFolder, dir, output, include, exclude);
-            }
+            File.WriteAllText(outputFile, sb.ToString());
         }
 
         private static bool IsTextFile(string filePath)

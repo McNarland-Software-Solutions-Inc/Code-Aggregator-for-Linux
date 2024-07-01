@@ -1,5 +1,6 @@
 {
-  "SourceFolder": "/home/robert-mcnarland/whatifexplorers/data_app",
+  "SourceFolder": "/home/robert-mcnarland/repositories/whatifexplorers/data_app",
   "Include": [],
-  "Exclude": []
+  "Exclude": [],
+  "OutputFile": "/home/robert-mcnarland/Documents/data_app.txt"
 }

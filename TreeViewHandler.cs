@@ -131,5 +131,39 @@ namespace CodeAggregatorGtk
                 } while (store.IterNext(ref childIter));
             }
         }
+
+        public bool AnyFileSelected()
+        {
+            if (folderTreeView.Model is TreeStore store)
+            {
+                if (store.GetIterFirst(out TreeIter iter))
+                {
+                    return CheckAnyFileSelected(store, iter);
+                }
+            }
+            return false;
+        }
+
+        private bool CheckAnyFileSelected(TreeStore store, TreeIter iter)
+        {
+            do
+            {
+                bool isSelected = (bool)store.GetValue(iter, 0);
+                if (isSelected)
+                {
+                    return true;
+                }
+
+                if (store.IterChildren(out TreeIter childIter, iter))
+                {
+                    if (CheckAnyFileSelected(store, childIter))
+                    {
+                        return true;
+                    }
+                }
+            } while (store.IterNext(ref iter));
+
+            return false;
+        }
     }
 }

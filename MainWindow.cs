@@ -25,6 +25,7 @@ public class MainWindow : Window
         hbox.PackStart(selectFolderButton, false, false, 5);
 
         outputPathEntry = new Entry() { PlaceholderText = "Output File Path" };
+        outputPathEntry.Changed += OnOutputPathChanged;
         hbox.PackStart(outputPathEntry, true, true, 5);
 
         selectOutputButton = new Button("Select Output");
@@ -33,11 +34,13 @@ public class MainWindow : Window
 
         aggregateButton = new Button("Aggregate");
         aggregateButton.Clicked += OnAggregateClicked;
+        aggregateButton.Sensitive = false; // Initially disable the button
         hbox.PackStart(aggregateButton, false, false, 5);
 
         vbox.PackStart(hbox, false, false, 5);
 
         folderTreeView = new TreeView();
+        folderTreeView.Selection.Changed += OnSelectionChanged;
         vbox.PackStart(folderTreeView, true, true, 5);
 
         Add(vbox);
@@ -102,6 +105,24 @@ public class MainWindow : Window
         }
 
         fileChooser.Destroy();
+    }
+
+    private void OnOutputPathChanged(object? sender, EventArgs e)
+    {
+        ValidateAggregateButtonState();
+    }
+
+    private void OnSelectionChanged(object? sender, EventArgs e)
+    {
+        ValidateAggregateButtonState();
+    }
+
+    private void ValidateAggregateButtonState()
+    {
+        var outputPathSet = !string.IsNullOrEmpty(outputPathEntry.Text);
+        var anyFileSelected = treeViewHandler?.AnyFileSelected() ?? false;
+
+        aggregateButton.Sensitive = outputPathSet && anyFileSelected;
     }
 
     private void OnAggregateClicked(object? sender, EventArgs e)
