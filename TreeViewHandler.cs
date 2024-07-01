@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Gtk;
+using System.IO;
 
 namespace CodeAggregatorGtk
 {
@@ -50,8 +51,31 @@ namespace CodeAggregatorGtk
                 if (store.GetIterFromString(out TreeIter iter, args.Path))
                 {
                     bool active = (bool)store.GetValue(iter, 0);
-                    store.SetValue(iter, 0, !active);
+                    bool newState = !active;
+                    store.SetValue(iter, 0, newState);
+
+                    string path = (string)store.GetValue(iter, 2);
+                    if (Directory.Exists(path))
+                    {
+                        ToggleChildren(store, iter, newState);
+                    }
                 }
+            }
+        }
+
+        private void ToggleChildren(TreeStore store, TreeIter parent, bool active)
+        {
+            if (store.IterChildren(out TreeIter childIter, parent))
+            {
+                do
+                {
+                    store.SetValue(childIter, 0, active);
+                    string path = (string)store.GetValue(childIter, 2);
+                    if (Directory.Exists(path))
+                    {
+                        ToggleChildren(store, childIter, active);
+                    }
+                } while (store.IterNext(ref childIter));
             }
         }
 
