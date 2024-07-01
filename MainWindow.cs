@@ -11,6 +11,7 @@ public class MainWindow : Window
     private string? sourceFolder;
     private CodeAggregatorGtk.SettingsHandler settingsHandler;
     private CodeAggregatorGtk.TreeViewHandler? treeViewHandler;
+    private ProgressBar progressBar;
 
     public MainWindow() : base("Code Aggregator")
     {
@@ -37,6 +38,10 @@ public class MainWindow : Window
         aggregateButton.Sensitive = false; // Initially disable the button
         hbox.PackStart(aggregateButton, false, false, 5);
 
+        progressBar = new ProgressBar();
+        progressBar.Visible = false;
+        vbox.PackStart(progressBar, false, false, 5);
+
         vbox.PackStart(hbox, false, false, 5);
 
         folderTreeView = new TreeView();
@@ -60,11 +65,12 @@ public class MainWindow : Window
         }
 
         treeViewHandler = new CodeAggregatorGtk.TreeViewHandler(folderTreeView, sourceFolder);
-        treeViewHandler.PopulateTreeView();
+        treeViewHandler.PopulateTreeView(settingsHandler.Settings.SelectedFiles);
 
         // Handle window delete event to exit gracefully
         DeleteEvent += (sender, args) =>
         {
+            SaveSelectedFiles();
             settingsHandler.SaveSettings();
             Application.Quit();
         };
@@ -73,6 +79,11 @@ public class MainWindow : Window
     public void SetSettings(CodeAggregatorGtk.Settings settings)
     {
         settingsHandler.Settings = settings;
+    }
+
+    private void SaveSelectedFiles()
+    {
+        settingsHandler.Settings.SelectedFiles = treeViewHandler?.GetSelectedFiles() ?? new List<string>();
     }
 
     private void OnSelectFolderClicked(object? sender, EventArgs e)
@@ -86,7 +97,7 @@ public class MainWindow : Window
             sourceFolder = folderChooser.Filename;
             settingsHandler.Settings.SourceFolder = sourceFolder;
             treeViewHandler = new CodeAggregatorGtk.TreeViewHandler(folderTreeView, sourceFolder);
-            treeViewHandler.PopulateTreeView();
+            treeViewHandler.PopulateTreeView(settingsHandler.Settings.SelectedFiles);
         }
 
         folderChooser.Destroy();
@@ -100,8 +111,21 @@ public class MainWindow : Window
 
         if (fileChooser.Run() == (int)ResponseType.Accept)
         {
-            outputPathEntry.Text = fileChooser.Filename;
-            settingsHandler.Settings.OutputFile = fileChooser.Filename;
+            if (File.Exists(fileChooser.Filename))
+            {
+                var overwriteDialog = new MessageDialog(this, DialogFlags.Modal, MessageType.Question, ButtonsType.YesNo, "File already exists. Overwrite?");
+                if (overwriteDialog.Run() == (int)ResponseType.Yes)
+                {
+                    outputPathEntry.Text = fileChooser.Filename;
+                    settingsHandler.Settings.OutputFile = fileChooser.Filename;
+                }
+                overwriteDialog.Destroy();
+            }
+            else
+            {
+                outputPathEntry.Text = fileChooser.Filename;
+                settingsHandler.Settings.OutputFile = fileChooser.Filename;
+            }
         }
 
         fileChooser.Destroy();
@@ -137,10 +161,35 @@ public class MainWindow : Window
                 treeViewHandler?.CollectSelectedItems(store, include, exclude);
             }
 
-            CodeAggregatorGtk.FileAggregator.AggregateFiles(sourceFolder, outputFilePath, include, exclude);
-            MessageDialog md = new MessageDialog(this, DialogFlags.DestroyWithParent, MessageType.Info, ButtonsType.Ok, $"Files aggregated successfully into {outputFilePath}");
-            md.Run();
-            md.Destroy();
+            // Show progress bar
+            progressBar.Visible = true;
+            progressBar.Fraction = 0;
+
+            // Run aggregation in a separate task to keep UI responsive
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    CodeAggregatorGtk.FileAggregator.AggregateFiles(sourceFolder, outputFilePath, include, exclude, UpdateProgress);
+                    Application.Invoke((_, __) =>
+                    {
+                        progressBar.Visible = false;
+                        MessageDialog md = new MessageDialog(this, DialogFlags.DestroyWithParent, MessageType.Info, ButtonsType.Ok, $"Files aggregated successfully into {outputFilePath}");
+                        md.Run();
+                        md.Destroy();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Application.Invoke((_, __) =>
+                    {
+                        progressBar.Visible = false;
+                        MessageDialog md = new MessageDialog(this, DialogFlags.DestroyWithParent, MessageType.Error, ButtonsType.Ok, $"An error occurred: {ex.Message}");
+                        md.Run();
+                        md.Destroy();
+                    });
+                }
+            });
         }
         else
         {
@@ -148,5 +197,13 @@ public class MainWindow : Window
             md.Run();
             md.Destroy();
         }
+    }
+
+    private void UpdateProgress(double progress)
+    {
+        Application.Invoke((_, __) =>
+        {
+            progressBar.Fraction = progress;
+        });
     }
 }

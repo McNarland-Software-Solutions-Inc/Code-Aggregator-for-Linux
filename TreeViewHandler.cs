@@ -15,7 +15,7 @@ namespace CodeAggregatorGtk
             sourceFolder = source;
         }
 
-        public void PopulateTreeView()
+        public void PopulateTreeView(List<string> selectedFiles)
         {
             if (!Directory.Exists(sourceFolder))
             {
@@ -35,33 +35,39 @@ namespace CodeAggregatorGtk
                 folderTreeView.AppendColumn("Name", new CellRendererText(), "text", 1);
             }
 
-            PopulateTreeView(store, sourceFolder, null);
+            PopulateTreeView(store, sourceFolder, null, selectedFiles);
         }
 
-        private void PopulateTreeView(TreeStore store, string path, TreeIter? parent)
+        private void PopulateTreeView(TreeStore store, string path, TreeIter? parent, List<string> selectedFiles)
         {
             foreach (var dir in Directory.GetDirectories(path))
             {
                 TreeIter iter;
+                var relativePath = Path.GetRelativePath(sourceFolder, dir);
+                bool isSelected = selectedFiles.Contains(relativePath);
+
                 if (parent.HasValue)
                 {
-                    iter = store.AppendValues(parent.Value, false, Path.GetFileName(dir), dir);
+                    iter = store.AppendValues(parent.Value, isSelected, Path.GetFileName(dir), dir);
                 }
                 else
                 {
-                    iter = store.AppendValues(false, Path.GetFileName(dir), dir);
+                    iter = store.AppendValues(isSelected, Path.GetFileName(dir), dir);
                 }
-                PopulateTreeView(store, dir, iter);
+                PopulateTreeView(store, dir, iter, selectedFiles);
             }
             foreach (var file in Directory.GetFiles(path))
             {
+                var relativePath = Path.GetRelativePath(sourceFolder, file);
+                bool isSelected = selectedFiles.Contains(relativePath);
+
                 if (parent.HasValue)
                 {
-                    store.AppendValues(parent.Value, false, Path.GetFileName(file), file);
+                    store.AppendValues(parent.Value, isSelected, Path.GetFileName(file), file);
                 }
                 else
                 {
-                    store.AppendValues(false, Path.GetFileName(file), file);
+                    store.AppendValues(isSelected, Path.GetFileName(file), file);
                 }
             }
         }
@@ -164,6 +170,39 @@ namespace CodeAggregatorGtk
             } while (store.IterNext(ref iter));
 
             return false;
+        }
+
+        public List<string> GetSelectedFiles()
+        {
+            var selectedFiles = new List<string>();
+            if (folderTreeView.Model is TreeStore store)
+            {
+                if (store.GetIterFirst(out TreeIter iter))
+                {
+                    CollectSelectedFiles(store, iter, selectedFiles);
+                }
+            }
+            return selectedFiles;
+        }
+
+        private void CollectSelectedFiles(TreeStore store, TreeIter iter, List<string> selectedFiles)
+        {
+            do
+            {
+                bool isSelected = (bool)store.GetValue(iter, 0);
+                string path = (string)store.GetValue(iter, 2);
+                string relativePath = Path.GetRelativePath(sourceFolder, path);
+
+                if (isSelected)
+                {
+                    selectedFiles.Add(relativePath);
+                }
+
+                if (store.IterChildren(out TreeIter childIter, iter))
+                {
+                    CollectSelectedFiles(store, childIter, selectedFiles);
+                }
+            } while (store.IterNext(ref iter));
         }
     }
 }

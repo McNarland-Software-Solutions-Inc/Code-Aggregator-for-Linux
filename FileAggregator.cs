@@ -7,12 +7,16 @@ namespace CodeAggregatorGtk
 {
     public class FileAggregator
     {
-        public static void AggregateFiles(string sourceFolder, string outputFile, List<string> include, List<string> exclude)
+        public static void AggregateFiles(string sourceFolder, string outputFile, List<string> include, List<string> exclude, Action<double> progressCallback)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"Source Folder: {sourceFolder}");
 
-            foreach (var file in Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories))
+            var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
+            int totalFiles = files.Length;
+            int processedFiles = 0;
+
+            foreach (var file in files)
             {
                 string relativePath = Path.GetRelativePath(sourceFolder, file);
                 if (exclude.Contains(file) || exclude.Contains(relativePath))
@@ -31,6 +35,9 @@ namespace CodeAggregatorGtk
                         sb.AppendLine($"\n--- End of File: {relativePath} ---\n");
                     }
                 }
+
+                processedFiles++;
+                progressCallback((double)processedFiles / totalFiles);
             }
 
             File.WriteAllText(outputFile, sb.ToString());
