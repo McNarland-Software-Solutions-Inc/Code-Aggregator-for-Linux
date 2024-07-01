@@ -27,11 +27,12 @@ namespace CodeAggregatorGtk
             else
             {
                 Application.Init();
+                var settingsHandler = new SettingsHandler();
                 var win = new MainWindow();
                 win.SetDefaultSize(800, 600);
                 win.SetPosition(WindowPosition.Center);
                 win.ShowAll();
-                win.SetSettings(settings);
+                win.SetSettings(settingsHandler.Settings);
                 Application.Run();
             }
         }
