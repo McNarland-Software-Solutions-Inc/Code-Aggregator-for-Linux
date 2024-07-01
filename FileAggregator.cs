@@ -11,26 +11,36 @@ namespace CodeAggregatorGtk
             using (var output = new StreamWriter(outputFile))
             {
                 output.WriteLine($"Source Folder: {sourceFolder}");
-                foreach (var file in Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories))
-                {
-                    string relativePath = Path.GetRelativePath(sourceFolder, file);
-                    if (exclude.Contains(file) || exclude.Contains(relativePath))
-                    {
-                        continue;
-                    }
+                AggregateFolder(sourceFolder, sourceFolder, output, include, exclude);
+            }
+        }
 
-                    if (include.Count == 0 || include.Contains(file) || include.Contains(relativePath))
+        private static void AggregateFolder(string rootFolder, string currentFolder, StreamWriter output, List<string> include, List<string> exclude)
+        {
+            foreach (var file in Directory.GetFiles(currentFolder, "*.*", SearchOption.TopDirectoryOnly))
+            {
+                string relativePath = Path.GetRelativePath(rootFolder, file);
+                if (exclude.Contains(file) || exclude.Contains(relativePath))
+                {
+                    continue;
+                }
+
+                if (include.Count == 0 || include.Contains(file) || include.Contains(relativePath))
+                {
+                    bool isTextFile = IsTextFile(file);
+                    if (isTextFile)
                     {
-                        bool isTextFile = IsTextFile(file);
-                        if (isTextFile)
-                        {
-                            output.WriteLine($"\n--- Start of File: {relativePath} ---\n");
-                            var content = File.ReadAllText(file);
-                            output.WriteLine(content);
-                            output.WriteLine($"\n--- End of File: {relativePath} ---\n");
-                        }
+                        output.WriteLine($"\n--- Start of File: {relativePath} ---\n");
+                        var content = File.ReadAllText(file);
+                        output.WriteLine(content);
+                        output.WriteLine($"\n--- End of File: {relativePath} ---\n");
                     }
                 }
+            }
+
+            foreach (var dir in Directory.GetDirectories(currentFolder, "*", SearchOption.TopDirectoryOnly))
+            {
+                AggregateFolder(rootFolder, dir, output, include, exclude);
             }
         }
 

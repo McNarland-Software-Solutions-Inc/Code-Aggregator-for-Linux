@@ -17,14 +17,23 @@ namespace CodeAggregatorGtk
 
         public void PopulateTreeView()
         {
+            if (!Directory.Exists(sourceFolder))
+            {
+                Console.WriteLine($"Directory not found: {sourceFolder}");
+                return;
+            }
+
             var store = new TreeStore(typeof(bool), typeof(string), typeof(string));
             folderTreeView.Model = store;
 
-            var toggleRenderer = new CellRendererToggle();
-            toggleRenderer.Toggled += OnToggled;
+            if (folderTreeView.Columns.Length == 0)
+            {
+                var toggleRenderer = new CellRendererToggle();
+                toggleRenderer.Toggled += OnToggled;
 
-            folderTreeView.AppendColumn("Include", toggleRenderer, "active", 0);
-            folderTreeView.AppendColumn("Name", new CellRendererText(), "text", 1);
+                folderTreeView.AppendColumn("Include", toggleRenderer, "active", 0);
+                folderTreeView.AppendColumn("Name", new CellRendererText(), "text", 1);
+            }
 
             PopulateTreeView(store, sourceFolder, null);
         }

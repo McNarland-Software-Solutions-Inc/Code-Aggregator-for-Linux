@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Gtk;
 
 public class MainWindow : Window
@@ -44,28 +45,26 @@ public class MainWindow : Window
         // Initialize settings handler
         settingsHandler = new CodeAggregatorGtk.SettingsHandler();
 
-        // Initialize tree view handler if source folder is set
-        if (!string.IsNullOrEmpty(settingsHandler.Settings.SourceFolder))
+        // Load settings and populate tree view if source folder is set
+        string documentsDirectory = System.IO.Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? "/", "Documents");
+        if (!string.IsNullOrEmpty(settingsHandler.Settings.SourceFolder) && Directory.Exists(settingsHandler.Settings.SourceFolder))
         {
             sourceFolder = settingsHandler.Settings.SourceFolder;
-            treeViewHandler = new CodeAggregatorGtk.TreeViewHandler(folderTreeView, sourceFolder);
-            treeViewHandler.PopulateTreeView();
+        }
+        else
+        {
+            sourceFolder = documentsDirectory;
         }
 
+        treeViewHandler = new CodeAggregatorGtk.TreeViewHandler(folderTreeView, sourceFolder);
+        treeViewHandler.PopulateTreeView();
+
         // Handle window delete event to exit gracefully
-        DeleteEvent += (sender, args) => 
+        DeleteEvent += (sender, args) =>
         {
             settingsHandler.SaveSettings();
             Application.Quit();
         };
-
-        // Load settings and populate tree view if source folder is set
-        if (!string.IsNullOrEmpty(settingsHandler.Settings.SourceFolder))
-        {
-            sourceFolder = settingsHandler.Settings.SourceFolder;
-            treeViewHandler = new CodeAggregatorGtk.TreeViewHandler(folderTreeView, sourceFolder);
-            treeViewHandler.PopulateTreeView();
-        }
     }
 
     public void SetSettings(CodeAggregatorGtk.Settings settings)
