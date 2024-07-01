@@ -186,7 +186,7 @@ public class MainWindow : Window
             {
                 try
                 {
-                    CodeAggregatorGtk.FileAggregator.AggregateFiles(sourceFolder, outputFilePath, selectedNodes, UpdateProgress);
+                    FileAggregator.AggregateFiles(sourceFolder, outputFilePath, selectedNodes, UpdateProgress);
                     Application.Invoke((_, __) =>
                     {
                         progressBar.Visible = false;
