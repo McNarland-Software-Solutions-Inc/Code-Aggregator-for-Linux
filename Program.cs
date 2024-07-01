@@ -2,6 +2,7 @@ using System;
 using Gtk;
 using Newtonsoft.Json;
 using System.IO;
+using System.Collections.Generic;
 
 namespace CodeAggregatorGtk
 {
@@ -27,11 +28,12 @@ namespace CodeAggregatorGtk
             else
             {
                 Application.Init();
+                var settingsHandler = new SettingsHandler();
                 var win = new MainWindow();
                 win.SetDefaultSize(800, 600);
                 win.SetPosition(WindowPosition.Center);
                 win.ShowAll();
-                win.SetSettings(settings);
+                win.SetSettings(settingsHandler.Settings);
                 Application.Run();
             }
         }
@@ -39,12 +41,10 @@ namespace CodeAggregatorGtk
         static void ShowHelp()
         {
             Console.WriteLine("Usage:");
-            Console.WriteLine("  dotnet run <source_folder> [-o:<output_file>] [-q] [-a:<file_or_folder_to_include>] [-r:<file_or_folder_to_exclude>]");
+            Console.WriteLine("  dotnet run <source_folder> [-o:<output_file>] [-q]");
             Console.WriteLine("Options:");
             Console.WriteLine("  -o:<output_file>    Specify the output file.");
             Console.WriteLine("  -q                  Quiet mode (no output).");
-            Console.WriteLine("  -a:<file_or_folder_to_include>    Add file or folder to include list.");
-            Console.WriteLine("  -r:<file_or_folder_to_exclude>    Add file or folder to exclude list.");
         }
 
         static void HandleCommandLineArgs(string[] args)
@@ -63,23 +63,11 @@ namespace CodeAggregatorGtk
                 {
                     quietMode = true;
                 }
-                else if (args[i].StartsWith("-a:"))
-                {
-                    string item = args[i].Substring(3);
-                    settings.Include.Add(item);
-                    SaveSettings();
-                }
-                else if (args[i].StartsWith("-r:"))
-                {
-                    string item = args[i].Substring(3);
-                    settings.Exclude.Add(item);
-                    SaveSettings();
-                }
             }
 
             try
             {
-                AggregateFiles(sourceFolder, outputFile, settings.Include, settings.Exclude);
+                AggregateFiles(sourceFolder, outputFile);
                 if (!quietMode)
                 {
                     Console.WriteLine($"Files aggregated successfully into {outputFile}");
@@ -94,22 +82,15 @@ namespace CodeAggregatorGtk
             }
         }
 
-        static void AggregateFiles(string sourceFolder, string outputFile, List<string> include, List<string> exclude)
+        static void AggregateFiles(string sourceFolder, string outputFile)
         {
+            var selectedNodes = settings.SelectedNodes;
             using (var output = new StreamWriter(outputFile))
             {
-                foreach (var file in Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories))
+                foreach (var file in selectedNodes)
                 {
-                    if (exclude.Contains(file))
-                    {
-                        continue;
-                    }
-
-                    if (include.Count == 0 || include.Contains(file))
-                    {
-                        var content = File.ReadAllText(file);
-                        output.WriteLine(content);
-                    }
+                    var content = File.ReadAllText(file);
+                    output.WriteLine(content);
                 }
             }
         }
