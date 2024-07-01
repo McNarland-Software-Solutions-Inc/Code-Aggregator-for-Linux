@@ -5,9 +5,8 @@ namespace CodeAggregatorGtk
     public class Settings
     {
         public string SourceFolder { get; set; } = string.Empty;
-        public List<string> Include { get; set; } = new List<string>();
-        public List<string> Exclude { get; set; } = new List<string>();
         public string OutputFile { get; set; } = string.Empty;
-        public List<string> SelectedFiles { get; set; } = new List<string>();
+        public List<string> SelectedNodes { get; set; } = new List<string>();
+        public Dictionary<string, string> OutputPaths { get; set; } = new Dictionary<string, string>();
     }
 }

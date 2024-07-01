@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using Gtk;
 
 namespace CodeAggregatorGtk
@@ -7,22 +6,16 @@ namespace CodeAggregatorGtk
     public class TreeViewHandler
     {
         private readonly TreeView folderTreeView;
-        private readonly string sourceFolder;
+        private readonly TreeNode rootNode;
 
-        public TreeViewHandler(TreeView treeView, string source)
+        public TreeViewHandler(TreeView treeView, TreeNode root)
         {
             folderTreeView = treeView;
-            sourceFolder = source;
+            rootNode = root;
         }
 
-        public void PopulateTreeView(List<string> selectedFiles)
+        public void PopulateTreeView(List<string> selectedNodes)
         {
-            if (!Directory.Exists(sourceFolder))
-            {
-                Console.WriteLine($"Directory not found: {sourceFolder}");
-                return;
-            }
-
             var store = new TreeStore(typeof(bool), typeof(string), typeof(string));
             folderTreeView.Model = store;
 
@@ -35,40 +28,18 @@ namespace CodeAggregatorGtk
                 folderTreeView.AppendColumn("Name", new CellRendererText(), "text", 1);
             }
 
-            PopulateTreeView(store, sourceFolder, null, selectedFiles);
+            PopulateTreeView(store, rootNode, null, selectedNodes);
         }
 
-        private void PopulateTreeView(TreeStore store, string path, TreeIter? parent, List<string> selectedFiles)
+        private void PopulateTreeView(TreeStore store, TreeNode node, TreeIter? parent, List<string> selectedNodes)
         {
-            foreach (var dir in Directory.GetDirectories(path))
-            {
-                TreeIter iter;
-                var relativePath = Path.GetRelativePath(sourceFolder, dir);
-                bool isSelected = selectedFiles.Contains(relativePath);
+            var iter = parent.HasValue
+                ? store.AppendValues(parent.Value, selectedNodes.Contains(node.Path), System.IO.Path.GetFileName(node.Path), node.Path)
+                : store.AppendValues(selectedNodes.Contains(node.Path), System.IO.Path.GetFileName(node.Path), node.Path);
 
-                if (parent.HasValue)
-                {
-                    iter = store.AppendValues(parent.Value, isSelected, Path.GetFileName(dir), dir);
-                }
-                else
-                {
-                    iter = store.AppendValues(isSelected, Path.GetFileName(dir), dir);
-                }
-                PopulateTreeView(store, dir, iter, selectedFiles);
-            }
-            foreach (var file in Directory.GetFiles(path))
+            foreach (var child in node.Children)
             {
-                var relativePath = Path.GetRelativePath(sourceFolder, file);
-                bool isSelected = selectedFiles.Contains(relativePath);
-
-                if (parent.HasValue)
-                {
-                    store.AppendValues(parent.Value, isSelected, Path.GetFileName(file), file);
-                }
-                else
-                {
-                    store.AppendValues(isSelected, Path.GetFileName(file), file);
-                }
+                PopulateTreeView(store, child, iter, selectedNodes);
             }
         }
 
@@ -80,62 +51,40 @@ namespace CodeAggregatorGtk
                 {
                     bool active = (bool)store.GetValue(iter, 0);
                     store.SetValue(iter, 0, !active);
-
-                    string path = (string)store.GetValue(iter, 2);
-                    if (Directory.Exists(path))
-                    {
-                        ToggleChildren(store, iter, !active);
-                    }
                 }
             }
         }
 
-        private void ToggleChildren(TreeStore store, TreeIter parent, bool active)
+        public List<string> GetSelectedNodes()
         {
-            if (store.IterChildren(out TreeIter childIter, parent))
+            var selectedNodes = new List<string>();
+            if (folderTreeView.Model is TreeStore store)
             {
-                do
+                if (store.GetIterFirst(out TreeIter iter))
                 {
-                    store.SetValue(childIter, 0, active);
-                    string path = (string)store.GetValue(childIter, 2);
-                    if (Directory.Exists(path))
-                    {
-                        ToggleChildren(store, childIter, active);
-                    }
-                } while (store.IterNext(ref childIter));
+                    CollectSelectedNodes(store, iter, selectedNodes);
+                }
             }
+            return selectedNodes;
         }
 
-        public void CollectSelectedItems(TreeStore store, List<string> include, List<string> exclude)
+        private void CollectSelectedNodes(TreeStore store, TreeIter iter, List<string> selectedNodes)
         {
-            if (store.GetIterFirst(out TreeIter iter))
+            do
             {
-                CollectSelectedItems(store, iter, include, exclude);
-            }
-        }
+                bool isSelected = (bool)store.GetValue(iter, 0);
+                string path = (string)store.GetValue(iter, 2);
 
-        private void CollectSelectedItems(TreeStore store, TreeIter iter, List<string> include, List<string> exclude)
-        {
-            bool isSelected = (bool)store.GetValue(iter, 0);
-            string path = (string)store.GetValue(iter, 2);
-            string relativePath = Path.GetRelativePath(sourceFolder, path);
-
-            if (isSelected)
-            {
-                include.Add(relativePath);
-            }
-            else
-            {
-                exclude.Add(relativePath);
-            }
-
-            if (store.IterChildren(out TreeIter childIter, iter))
-            {
-                do
+                if (isSelected)
                 {
-                    CollectSelectedItems(store, childIter, include, exclude);
-                } while (store.IterNext(ref childIter));
-            }
+                    selectedNodes.Add(path);
+                }
+
+                if (store.IterChildren(out TreeIter childIter, iter))
+                {
+                    CollectSelectedNodes(store, childIter, selectedNodes);
+                }
+            } while (store.IterNext(ref iter));
         }
 
         public bool AnyFileSelected()
@@ -170,39 +119,6 @@ namespace CodeAggregatorGtk
             } while (store.IterNext(ref iter));
 
             return false;
-        }
-
-        public List<string> GetSelectedFiles()
-        {
-            var selectedFiles = new List<string>();
-            if (folderTreeView.Model is TreeStore store)
-            {
-                if (store.GetIterFirst(out TreeIter iter))
-                {
-                    CollectSelectedFiles(store, iter, selectedFiles);
-                }
-            }
-            return selectedFiles;
-        }
-
-        private void CollectSelectedFiles(TreeStore store, TreeIter iter, List<string> selectedFiles)
-        {
-            do
-            {
-                bool isSelected = (bool)store.GetValue(iter, 0);
-                string path = (string)store.GetValue(iter, 2);
-                string relativePath = Path.GetRelativePath(sourceFolder, path);
-
-                if (isSelected)
-                {
-                    selectedFiles.Add(relativePath);
-                }
-
-                if (store.IterChildren(out TreeIter childIter, iter))
-                {
-                    CollectSelectedFiles(store, childIter, selectedFiles);
-                }
-            } while (store.IterNext(ref iter));
         }
     }
 }

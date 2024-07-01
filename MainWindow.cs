@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Gtk;
+using CodeAggregatorGtk;
 
 public class MainWindow : Window
 {
@@ -9,9 +10,10 @@ public class MainWindow : Window
     private Entry outputPathEntry;
     private Button selectFolderButton, aggregateButton, selectOutputButton;
     private string? sourceFolder;
-    private CodeAggregatorGtk.SettingsHandler settingsHandler;
-    private CodeAggregatorGtk.TreeViewHandler? treeViewHandler;
+    private SettingsHandler settingsHandler;
+    private TreeViewHandler? treeViewHandler;
     private ProgressBar progressBar;
+    private CodeAggregatorGtk.TreeNode rootNode;
 
     public MainWindow() : base("Code Aggregator")
     {
@@ -51,7 +53,7 @@ public class MainWindow : Window
         Add(vbox);
 
         // Initialize settings handler
-        settingsHandler = new CodeAggregatorGtk.SettingsHandler();
+        settingsHandler = new SettingsHandler();
 
         // Load settings and populate tree view if source folder is set
         string documentsDirectory = System.IO.Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? "/", "Documents");
@@ -64,13 +66,19 @@ public class MainWindow : Window
             sourceFolder = documentsDirectory;
         }
 
-        treeViewHandler = new CodeAggregatorGtk.TreeViewHandler(folderTreeView, sourceFolder);
-        treeViewHandler.PopulateTreeView(settingsHandler.Settings.SelectedFiles);
+        if (settingsHandler.Settings.OutputPaths.ContainsKey(sourceFolder))
+        {
+            outputPathEntry.Text = settingsHandler.Settings.OutputPaths[sourceFolder];
+        }
+
+        rootNode = BuildTreeNode(sourceFolder);
+        treeViewHandler = new TreeViewHandler(folderTreeView, rootNode);
+        treeViewHandler.PopulateTreeView(settingsHandler.Settings.SelectedNodes);
 
         // Handle window delete event to exit gracefully
         DeleteEvent += (sender, args) =>
         {
-            SaveSelectedFiles();
+            SaveSelectedNodes();
             settingsHandler.SaveSettings();
             Application.Quit();
         };
@@ -81,9 +89,10 @@ public class MainWindow : Window
         settingsHandler.Settings = settings;
     }
 
-    private void SaveSelectedFiles()
+    private void SaveSelectedNodes()
     {
-        settingsHandler.Settings.SelectedFiles = treeViewHandler?.GetSelectedFiles() ?? new List<string>();
+        settingsHandler.Settings.SelectedNodes = treeViewHandler?.GetSelectedNodes() ?? new List<string>();
+        settingsHandler.Settings.OutputPaths[sourceFolder!] = outputPathEntry.Text;
     }
 
     private void OnSelectFolderClicked(object? sender, EventArgs e)
@@ -96,8 +105,18 @@ public class MainWindow : Window
         {
             sourceFolder = folderChooser.Filename;
             settingsHandler.Settings.SourceFolder = sourceFolder;
-            treeViewHandler = new CodeAggregatorGtk.TreeViewHandler(folderTreeView, sourceFolder);
-            treeViewHandler.PopulateTreeView(settingsHandler.Settings.SelectedFiles);
+            rootNode = BuildTreeNode(sourceFolder);
+            treeViewHandler = new TreeViewHandler(folderTreeView, rootNode);
+            treeViewHandler.PopulateTreeView(settingsHandler.Settings.SelectedNodes);
+
+            if (settingsHandler.Settings.OutputPaths.ContainsKey(sourceFolder))
+            {
+                outputPathEntry.Text = settingsHandler.Settings.OutputPaths[sourceFolder];
+            }
+            else
+            {
+                outputPathEntry.Text = string.Empty;
+            }
         }
 
         folderChooser.Destroy();
@@ -118,6 +137,7 @@ public class MainWindow : Window
                 {
                     outputPathEntry.Text = fileChooser.Filename;
                     settingsHandler.Settings.OutputFile = fileChooser.Filename;
+                    settingsHandler.Settings.OutputPaths[sourceFolder!] = fileChooser.Filename;
                 }
                 overwriteDialog.Destroy();
             }
@@ -125,6 +145,7 @@ public class MainWindow : Window
             {
                 outputPathEntry.Text = fileChooser.Filename;
                 settingsHandler.Settings.OutputFile = fileChooser.Filename;
+                settingsHandler.Settings.OutputPaths[sourceFolder!] = fileChooser.Filename;
             }
         }
 
@@ -154,12 +175,7 @@ public class MainWindow : Window
         var outputFilePath = outputPathEntry.Text;
         if (!string.IsNullOrEmpty(sourceFolder) && !string.IsNullOrEmpty(outputFilePath))
         {
-            var include = new List<string>();
-            var exclude = new List<string>();
-            if (folderTreeView.Model is TreeStore store)
-            {
-                treeViewHandler?.CollectSelectedItems(store, include, exclude);
-            }
+            var selectedNodes = treeViewHandler?.GetSelectedNodes() ?? new List<string>();
 
             // Show progress bar
             progressBar.Visible = true;
@@ -170,7 +186,7 @@ public class MainWindow : Window
             {
                 try
                 {
-                    CodeAggregatorGtk.FileAggregator.AggregateFiles(sourceFolder, outputFilePath, include, exclude, UpdateProgress);
+                    CodeAggregatorGtk.FileAggregator.AggregateFiles(sourceFolder, outputFilePath, selectedNodes, UpdateProgress);
                     Application.Invoke((_, __) =>
                     {
                         progressBar.Visible = false;
@@ -205,5 +221,25 @@ public class MainWindow : Window
         {
             progressBar.Fraction = progress;
         });
+    }
+
+    private CodeAggregatorGtk.TreeNode BuildTreeNode(string path)
+    {
+        var node = new CodeAggregatorGtk.TreeNode(path);
+        if (Directory.Exists(path))
+        {
+            foreach (var dir in Directory.GetDirectories(path))
+            {
+                var childNode = BuildTreeNode(dir);
+                node.AddChild(childNode);
+            }
+
+            foreach (var file in Directory.GetFiles(path))
+            {
+                var childNode = new CodeAggregatorGtk.TreeNode(file) { IsSelected = true };
+                node.AddChild(childNode);
+            }
+        }
+        return node;
     }
 }

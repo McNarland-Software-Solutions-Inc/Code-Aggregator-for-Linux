@@ -7,40 +7,32 @@ namespace CodeAggregatorGtk
 {
     public class FileAggregator
     {
-        public static void AggregateFiles(string sourceFolder, string outputFile, List<string> include, List<string> exclude, Action<double> progressCallback)
+        public static void AggregateFiles(string sourceFolder, string outputFile, List<string> selectedNodes, Action<double> progressCallback)
         {
-            var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
-            int totalFiles = files.Length;
-            int processedFiles = 0;
+            int totalNodes = selectedNodes.Count;
+            int processedNodes = 0;
 
             using (var output = new StreamWriter(outputFile, false, Encoding.UTF8))
             {
                 output.WriteLine($"Source Folder: {sourceFolder}");
 
-                foreach (var file in files)
+                foreach (var node in selectedNodes)
                 {
-                    string relativePath = Path.GetRelativePath(sourceFolder, file);
-                    if (exclude.Contains(file) || exclude.Contains(relativePath))
-                    {
-                        continue;
-                    }
+                    string relativePath = Path.GetRelativePath(sourceFolder, node);
+                    bool isTextFile = IsTextFile(node);
 
-                    if (include.Count == 0 || include.Contains(file) || include.Contains(relativePath))
+                    if (isTextFile)
                     {
-                        bool isTextFile = IsTextFile(file);
-                        if (isTextFile)
+                        output.WriteLine($"\n--- Start of File: {relativePath} ---\n");
+                        foreach (var line in File.ReadLines(node))
                         {
-                            output.WriteLine($"\n--- Start of File: {relativePath} ---\n");
-                            foreach (var line in File.ReadLines(file))
-                            {
-                                output.WriteLine(line);
-                            }
-                            output.WriteLine($"\n--- End of File: {relativePath} ---\n");
+                            output.WriteLine(line);
                         }
+                        output.WriteLine($"\n--- End of File: {relativePath} ---\n");
                     }
 
-                    processedFiles++;
-                    progressCallback((double)processedFiles / totalFiles);
+                    processedNodes++;
+                    progressCallback((double)processedNodes / totalNodes);
                 }
             }
         }
