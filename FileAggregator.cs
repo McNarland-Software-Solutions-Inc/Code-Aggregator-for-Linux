@@ -9,38 +9,40 @@ namespace CodeAggregatorGtk
     {
         public static void AggregateFiles(string sourceFolder, string outputFile, List<string> include, List<string> exclude, Action<double> progressCallback)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine($"Source Folder: {sourceFolder}");
-
             var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
             int totalFiles = files.Length;
             int processedFiles = 0;
 
-            foreach (var file in files)
+            using (var output = new StreamWriter(outputFile, false, Encoding.UTF8))
             {
-                string relativePath = Path.GetRelativePath(sourceFolder, file);
-                if (exclude.Contains(file) || exclude.Contains(relativePath))
-                {
-                    continue;
-                }
+                output.WriteLine($"Source Folder: {sourceFolder}");
 
-                if (include.Count == 0 || include.Contains(file) || include.Contains(relativePath))
+                foreach (var file in files)
                 {
-                    bool isTextFile = IsTextFile(file);
-                    if (isTextFile)
+                    string relativePath = Path.GetRelativePath(sourceFolder, file);
+                    if (exclude.Contains(file) || exclude.Contains(relativePath))
                     {
-                        sb.AppendLine($"\n--- Start of File: {relativePath} ---\n");
-                        var content = File.ReadAllText(file);
-                        sb.AppendLine(content);
-                        sb.AppendLine($"\n--- End of File: {relativePath} ---\n");
+                        continue;
                     }
+
+                    if (include.Count == 0 || include.Contains(file) || include.Contains(relativePath))
+                    {
+                        bool isTextFile = IsTextFile(file);
+                        if (isTextFile)
+                        {
+                            output.WriteLine($"\n--- Start of File: {relativePath} ---\n");
+                            foreach (var line in File.ReadLines(file))
+                            {
+                                output.WriteLine(line);
+                            }
+                            output.WriteLine($"\n--- End of File: {relativePath} ---\n");
+                        }
+                    }
+
+                    processedFiles++;
+                    progressCallback((double)processedFiles / totalFiles);
                 }
-
-                processedFiles++;
-                progressCallback((double)processedFiles / totalFiles);
             }
-
-            File.WriteAllText(outputFile, sb.ToString());
         }
 
         private static bool IsTextFile(string filePath)

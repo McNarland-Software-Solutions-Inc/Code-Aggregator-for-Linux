@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CodeAggregatorLinux")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cb7b964c40cc9022cb8c574e57df4b153f9bcdd1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d7bcf1751f6e589ea73774eece5615be96878abc")]
 [assembly: System.Reflection.AssemblyProductAttribute("CodeAggregatorLinux")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CodeAggregatorLinux")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
